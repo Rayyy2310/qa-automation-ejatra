@@ -1,0 +1,12 @@
+User-agent: *
+Disallow: /admin/
+Disallow: /login
+Disallow: /logout
+Disallow: /api/
+Allow: /
+Allow: /catalog
+Allow: /about
+Allow: /faq
+Allow: /traceability/
+
+Sitemap: http://localhost/seaweed/public/sitemap.xml

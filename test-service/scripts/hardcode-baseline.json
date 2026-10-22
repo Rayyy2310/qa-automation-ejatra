@@ -1,0 +1,4 @@
+{
+  "_doc": "Baseline toleransi hardcode di runner/utils. Nilai max harus 0 agar tidak ada hardcode baru yang lolos.",
+  "max": 0
+}

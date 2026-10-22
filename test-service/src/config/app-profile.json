@@ -1,0 +1,219 @@
+{
+  "_doc": "Semua selector/keyword spesifik aplikasi (e-Jatra) ada di sini, BUKAN di kode runner. Untuk aplikasi/modul baru cukup edit file ini (atau set env APP_PROFILE_PATH).",
+  "loginForm": "#form_login",
+  "loginUsernameSelector": "#username, input[name=\"username\"], #form_login input[type=\"text\"], input[type=\"text\"]",
+  "loginPasswordSelector": "#password, input[name=\"password\"], #form_login input[type=\"password\"], input[type=\"password\"]",
+  "loginRecaptchaSelector": "#g-recaptcha-response, .g-recaptcha",
+  "loginSubmitSelector": "#form_login button[type=\"submit\"], button:has-text(\"Masuk\"), button[type=\"submit\"], .btn-primary",
+  "scanDashboards": [
+    { "name": "Aspal", "path": "dashboard-aspal" },
+    { "name": "Kendaraan", "path": "dashboard-kendaraan" },
+    { "name": "Tabung", "path": "dashboard-tabung" },
+    { "name": "Heavy Equipment", "path": "dashboard-heavy" },
+    { "name": "Aset", "path": "dashboard-aset" }
+  ],
+  "debugOverlay": "#debug-bar, #debug-icon, #ci-history, [id*=\"debug\"], [class*=\"debug-bar\"], [data-debugbar]",
+  "debugOverlayContainer": "#toolbarContainer, #ci-debug-bar, #debugbar, .ci-debug-bar",
+  "debugOverlayStrict": "#debug-bar, #debug-icon, #ci-history, [id*=\"debug\"], [class*=\"debug\"], [class*=\"timeline\"], [data-debugbar]",
+  "formTabPane": "#tabForm.active, #tabForm.show, #tab_form.active, #tab_form.show",
+  "formTabTrigger": "#form-tab.active, a[href*=\"form\" i].active, button[data-bs-target*=\"form\" i].active",
+  "formTabAll": "#form-tab, a[href=\"#tabForm\"], button[data-bs-target=\"#tabForm\"], a[href=\"#tab_form\"]",
+  "formPaneAll": "#tabForm, #tab_form, .tab-pane[id*=\"form\" i]",
+  "tablePaneAll": "#tabTable, #tab_tabel, .tab-pane[id*=\"tab\" i]:not([id*=\"form\" i])",
+  "tableTabAll": "#tabel-tab, a[href=\"#tabTable\"], button[data-bs-target=\"#tabTable\"], a[href=\"#tab_tabel\"]",
+  "mainDataTable": "#tbl_kontrak",
+  "dataTableRows": ".dataTable tbody tr, table.dataTable tbody tr",
+  "dataTableDetailsControl": "td.details-control, td.dt-control, [class*=\"details-control\"]",
+  "portalMenuSelector": ".dp-portal-fix-menu.show, [class*=\"portal-fix\"].show",
+  "portalMenuClass": "dp-portal-fix-menu",
+  "tableNames": ["tbl_kontrak", "table_po_aspal", "tabel_spm_aspal"],
+  "rowTriggerSelectors": [
+    "#tbl_kontrak tbody tr:first-child td:first-child .dropdown-toggle",
+    "#table_po_aspal tbody tr:first-child td:first-child .dropdown-toggle"
+  ],
+  "swalFields": {
+    "volume": "#swal_volume",
+    "tgl_kirim": "#swal_tgl_kirim",
+    "keterangan": "#swal_keterangan",
+    "jobsite": "#swal_jobsite"
+  },
+  "choiceCard": ".spm-type-card",
+  "modalPickButtons": [
+    ".btn-pilih-po",
+    ".btn-pilih-rk",
+    ".btn-pilih-kontrak",
+    ".btn-pilih"
+  ],
+  "modalPickClassToken": "btn-pilih",
+  "modalPickButtonSelector": "button[class*=\"btn-pilih\"]",
+  "modalSearchInput": "#po_modal_search",
+  "inlineDeleteButtons": [
+    "#tbody_pengiriman button.btn-danger",
+    "#tbody_pengiriman .btn-danger",
+    "#tbody_pengiriman button[onclick*=\"remove\"]",
+    "#tbody_pengiriman button[onclick*=\"hapus\"]",
+    "#tabel_pengiriman button.btn-danger",
+    "#tabel_pengiriman button",
+    "tbody:not(:has(.dropdown-toggle)) tr .btn-hapus",
+    "button[onclick*=\"removeRow\"]",
+    "button[onclick*=\"hapusRow\"]"
+  ],
+  "addItemButtons": [
+    "button[onclick*=\"addDeliveryItem\"]",
+    "#form-tab button:has-text(\"Tambah\")"
+  ],
+  "formAddButtons": [
+    "button[id*=\"Tambah\" i]",
+    "button:has-text(\"Tambah\")",
+    "a:has-text(\"Tambah\")"
+  ],
+  "specialActionButtons": [
+    "button:has-text(\"Verifikasi Sekarang\")"
+  ],
+  "selectAllCheckbox": "#chk_all_spm, #select_all",
+  "selectAllTokens": ["chk_all", "select_all", "thead", "pilih semua", "centang semua", "chk_all_spm"],
+  "cancelButtons": [
+    "button#btn_batal_form",
+    "#btn_batal_form",
+    "button#btn_batal",
+    "#btn_batal"
+  ],
+  "cancelButtonOnclick": "button[onclick*=\"batal\" i]",
+  "rowCheckbox": ".chk-spm",
+  "confirmAgreeCheckbox": "#chkConfirmAgree",
+  "formHydrationInputs": [
+    "#harga, input[name*=\"harga\"]",
+    "#volume, input[name*=\"volume\"]",
+    "#no_kontrak, input[name*=\"no\"], input[id*=\"no\"]"
+  ],
+  "filterFieldMaps": [
+    {
+      "pattern": "^#?(jenis_produk|jns_produk|jenis_produk_spm_aspal|jenis_produk_spm_aspal_lap)$",
+      "candidates": ["#produk_filter", "#f_produk", "#jns_produk_filter"]
+    },
+    {
+      "pattern": "^#?status(?:_spm|_po|_kontrak)?$",
+      "candidates": ["#status_filter", "#f_status"]
+    },
+    {
+      "pattern": "^#?unit(?:_spm_aspal|_spm_aspal_lap)?$",
+      "candidates": ["#unit_filter", "#f_unit"]
+    },
+    {
+      "pattern": "^#?(?:produk_timbang_filter|produk_filter|f_produk|jns_produk_filter)$",
+      "candidates": [".tab-pane.active select[id*=\"produk\"]", "#jenis_produk_spm_aspal", "#jenis_produk", "#jns_produk"]
+    },
+    {
+      "pattern": "^#?(?:unit_timbang_filter|unit_filter|f_unit)$",
+      "candidates": [".tab-pane.active select[id*=\"unit\"]", "#unit_spm_aspal", "#unit", "#unit_po"]
+    },
+    {
+      "pattern": "^#?(?:customer_filter|cus_filter|f_cus)$",
+      "candidates": [".tab-pane.active select[id*=\"customer\"]", "#nama_customer_spm_aspal", "#customer"]
+    },
+    {
+      "pattern": "^#?(?:status_filter|f_status)$",
+      "candidates": [".tab-pane.active select[id*=\"status\"]", "#status_segel", "#status_spm", "#status"]
+    }
+  ],
+  "rowActionDefs": {
+    "ubah_harga": {
+      "intent": "ubah_harga",
+      "keywords": ["ubah harga", "ubah_harga", "ganti harga"],
+      "cssClass": "btn-ubah-harga",
+      "jqSel": ".btn-ubah-harga, a[href*=\"ubah_harga\"]"
+    },
+    "edit": {
+      "intent": "edit",
+      "keywords": ["edit", "ubah", "koreksi"],
+      "cssClass": "btn-edit",
+      "jqSel": ".btn-edit, a[href*=\"edit\"]"
+    },
+    "cetak": {
+      "intent": "cetak",
+      "keywords": ["cetak", "print", "pdf"],
+      "cssClass": "btn-cetak",
+      "jqSel": ".btn-cetak, a[href*=\"cetak\"], a[href*=\"print\"]"
+    },
+    "aktifkan": {
+      "intent": "aktifkan",
+      "keywords": ["aktifkan kembali", "aktifkan", "aktif", "activate"],
+      "labels": ["Aktifkan Kembali", "Aktifkan", "Aktif"],
+      "cssClass": "btn-aktifkan",
+      "extraClass": ["btn-toggle-status", "btn-aktif"],
+      "jqSel": ".btn-aktifkan, .btn-toggle-status, .btn-aktif, a:contains('Aktifkan'), button:contains('Aktifkan')"
+    },
+    "close": {
+      "intent": "close",
+      "keywords": ["close", "tutup", "selesai"],
+      "labels": ["Close", "Tutup", "Selesai"],
+      "cssClass": "btn-close-spm",
+      "extraClass": ["btn-toggle-status"],
+      "jqSel": ".btn-close-spm, .btn-toggle-status, a:contains('Close'), a:contains('Tutup')"
+    },
+    "batalkan": {
+      "intent": "batalkan",
+      "keywords": ["batalkan", "batal", "cancel"],
+      "labels": ["Batalkan", "Batal", "Cancel"],
+      "cssClass": "btn-batalkan",
+      "extraClass": ["btn-batal", "btn-delete"],
+      "jqSel": ".btn-batalkan, .btn-delete, .btn-batal, a[href*=\"batal\"], a[href*=\"delete\"], a:contains('Batalkan'), a:contains('Batal')"
+    },
+    "hapus": {
+      "intent": "hapus",
+      "keywords": ["hapus", "delete"],
+      "labels": ["Hapus", "Delete"],
+      "cssClass": "btn-hapus",
+      "extraClass": ["btn-delete"],
+      "jqSel": ".btn-hapus, .btn-delete, a:contains('Hapus'), button:contains('Hapus')"
+    },
+    "view": {
+      "intent": "view",
+      "keywords": ["view", "lihat", "detail"],
+      "labels": ["View Data", "View", "Lihat Data", "Lihat", "Detail"],
+      "cssClass": "btn-view",
+      "jqSel": ".btn-view, a:contains('View'), a:contains('Lihat'), a:contains('Detail')"
+    }
+  },
+  "scanner": {
+    "ignoredNav": ".navbar, .navbar-nav, nav, header, .topbar, .main-header, .sidebar, .sidebar-menu, .menu, #sidebar, .navigation, [role=\"navigation\"], .app-header, .user-panel",
+    "moduleToolbarToggleSelector": "[id^=\"quickLinksToggle\"]",
+    "landingPathKeyword": "halaman-utama",
+    "landingMenuName": "Halaman Utama",
+    "formTriggers": [
+      "[data-bs-toggle=\"tab\"][href*=\"form\"]",
+      "[data-toggle=\"tab\"][href*=\"form\"]",
+      "#form-tab",
+      "a.nav-link:has-text(\"Form\")",
+      "button.nav-link:has-text(\"Form\")",
+      "a.nav-link:has-text(\"Input\")",
+      "#btnTambah",
+      "#btn_tambah",
+      "button:has-text(\"Tambah Data\")",
+      "a.btn:has-text(\"Tambah Data\")",
+      "button:has-text(\"Tambah\")",
+      "a.btn:has-text(\"Tambah\")"
+    ],
+    "defaultFormTriggerSelector": "a[href*=\"form\"], #btnTambah",
+    "rowFormTriggers": [
+      "tbody tr:first-child a.btn-edit",
+      "tbody tr:first-child button.btn-edit",
+      "tbody tr:first-child :is(button, a):has-text(\"Realisasi\")",
+      "tbody tr:first-child :is(button, a):has-text(\"Edit\")",
+      "tbody tr:first-child :is(button, a):has-text(\"Ubah\")"
+    ],
+    "defaultRowFormTriggerSelector": "tbody tr:first-child a.btn-edit",
+    "formContainerSelector": ".tab-pane.active, .tab-pane.show, #form, form",
+    "tableTabTriggers": [
+      "[data-bs-toggle=\"tab\"][href*=\"tabel\"]",
+      "[data-bs-toggle=\"tab\"][href*=\"table\"]",
+      "[data-toggle=\"tab\"][href*=\"tabel\"]",
+      "[data-toggle=\"tab\"][href*=\"table\"]",
+      "#table-tab",
+      "#tabel-tab",
+      "a.nav-link:has-text(\"Tabel\")",
+      "a.nav-link:has-text(\"Data\")"
+    ]
+  }
+}
+

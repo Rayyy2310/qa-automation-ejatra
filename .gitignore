@@ -1,0 +1,48 @@
+#--------------------------------------------------------------------
+# FILE RAHASIA & ENV — JANGAN SAMPAI KE GITHUB!
+#--------------------------------------------------------------------
+.env
+test-service/.env
+test-service/.env.local
+test-service/.env.production
+
+#--------------------------------------------------------------------
+# FOLDER SISTEM & DEPENDENCIES
+#--------------------------------------------------------------------
+system/
+vendor/
+test-service/node_modules/
+npm-debug.log*
+
+#--------------------------------------------------------------------
+# FILE CACHE, LOG, SESSION & UPLOADS
+#--------------------------------------------------------------------
+writable/cache/*
+writable/debugbar/*
+writable/logs/*
+writable/session/*
+writable/uploads/*
+!writable/.htaccess
+!writable/index.html
+
+# Screenshots & Testing Artifacts
+public/uploads/screenshots/*
+!public/uploads/screenshots/.gitkeep
+test-service/screenshots/*
+!test-service/screenshots/.gitkeep
+test-service/playwright-report/
+test-service/test-results/
+
+#--------------------------------------------------------------------
+# FILE SISTEM OPERASI, EDITOR & SCRATCH
+#--------------------------------------------------------------------
+Thumbs.db
+.DS_Store
+*.swp
+*.swo
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+scratch/
+
