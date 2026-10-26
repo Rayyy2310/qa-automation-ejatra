@@ -49,6 +49,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var resultSummary        = document.getElementById('resultSummary');
     var resultDuration       = document.getElementById('resultDuration');
     var btnCancelRun         = document.getElementById('btnCancelRun');
+    var btnBackToPlan        = document.getElementById('btnBackToPlan');
     var testProgressBar      = document.getElementById('testProgressBar');
     var progressPercentText  = document.getElementById('progressPercentText');
     var executionNotice      = document.getElementById('executionNotice');
@@ -87,8 +88,9 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function initStudioTabs() {
-        if (tabBtnPlan)    tabBtnPlan.addEventListener('click', function() { switchStudioTab('plan'); });
-        if (tabBtnMonitor) tabBtnMonitor.addEventListener('click', function() { switchStudioTab('monitor'); });
+        if (tabBtnPlan)     tabBtnPlan.addEventListener('click', function() { switchStudioTab('plan'); });
+        if (tabBtnMonitor)  tabBtnMonitor.addEventListener('click', function() { switchStudioTab('monitor'); });
+        if (btnBackToPlan)  btnBackToPlan.addEventListener('click', function() { switchStudioTab('plan'); });
     }
 
     var PROMPT_TEMPLATES = {
@@ -737,6 +739,40 @@ document.addEventListener('DOMContentLoaded', function () {
     // =========================================================================
     // SECTION E - Run Test & Polling
     // =========================================================================
+    function resetMonitorToIdle(statusLabel, message) {
+        if (btnRunTest)   btnRunTest.disabled = false;
+        if (btnCancelRun) btnCancelRun.classList.add('d-none');
+        if (pollInterval) {
+            clearInterval(pollInterval);
+            pollInterval = null;
+        }
+        currentRunId = null;
+
+        if (overallStatus) {
+            overallStatus.className = 'pill-status pill-neutral ms-1 py-0 px-2';
+            overallStatus.innerHTML = statusLabel || 'IDLE';
+        }
+        if (resultSummary) {
+            resultSummary.textContent = message || 'Pengujian belum dijalankan.';
+        }
+        if (resultDuration) {
+            resultDuration.innerHTML = '<i class="bi bi-stopwatch"></i> 0 ms';
+        }
+        if (progressPercentText) {
+            progressPercentText.textContent = 'Progres: 0%';
+        }
+        if (testProgressBar) {
+            testProgressBar.className = 'progress-bar bg-secondary';
+            testProgressBar.style.width = '0%';
+            testProgressBar.classList.remove('progress-bar-animated', 'progress-bar-striped');
+        }
+        if (queueArea) queueArea.classList.add('d-none');
+
+        if (currentTestPlan && currentTestPlan.steps) {
+            renderLiveSteps([], currentTestPlan.steps, 'IDLE');
+        }
+    }
+
     function setRunningState() {
         switchStudioTab('monitor');
         if (resultArea)      resultArea.classList.remove('d-none');
@@ -745,7 +781,11 @@ document.addEventListener('DOMContentLoaded', function () {
         if (overallStatus)   { overallStatus.className = 'pill-status pill-running ms-1 py-0 px-2'; overallStatus.innerHTML = '<i class="bi bi-arrow-repeat"></i> RUNNING'; }
         if (resultSummary)   resultSummary.textContent  = 'Memulai Playwright Runner...';
         if (resultDuration)  resultDuration.innerHTML   = '<i class="bi bi-stopwatch"></i> 0 ms';
-        if (testProgressBar) testProgressBar.style.width = '0%';
+        if (progressPercentText) progressPercentText.textContent = 'Progres: 0%';
+        if (testProgressBar) {
+            testProgressBar.className = 'progress-bar bg-primary progress-bar-striped progress-bar-animated';
+            testProgressBar.style.width = '0%';
+        }
         if (executionNotice) executionNotice.classList.add('d-none');
     }
 
@@ -768,15 +808,15 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (data.status === 'QUEUED' && queueArea && queueText) { queueArea.classList.remove('d-none'); queueText.textContent = 'Pengujian masuk antrian (Posisi: ' + (data.queue_position || 1) + ').'; }
                     startPolling();
                 } else {
-                    btnRunTest.disabled = false;
-                    if (btnCancelRun) btnCancelRun.classList.add('d-none');
+                    resetMonitorToIdle('<i class="bi bi-x-circle text-danger me-1"></i> DITOLAK', 'Pengujian ditolak sistem sebelum dijalankan.');
+                    switchStudioTab('plan');
                     var errorDetail = (data.validation_errors && data.validation_errors.length > 0) ? '\n- ' + data.validation_errors.join('\n- ') : '';
                     showAlert({ variant: 'danger', icon: 'bi-exclamation-octagon-fill', title: 'Gagal Menjalankan Test', text: (data.error || 'Server error') + errorDetail });
                 }
             })
             .catch(function(err) {
-                btnRunTest.disabled = false;
-                if (btnCancelRun) btnCancelRun.classList.add('d-none');
+                resetMonitorToIdle('<i class="bi bi-x-circle text-danger me-1"></i> GAGAL', 'Gagal terhubung ke CI4 Backend.');
+                switchStudioTab('plan');
                 console.error(err);
                 showAlert({ variant: 'danger', icon: 'bi-wifi-off', title: 'Koneksi Runner Gagal', text: 'Gagal terhubung ke CI4 Backend.' });
             });
@@ -786,7 +826,11 @@ document.addEventListener('DOMContentLoaded', function () {
     function initCancelRun() {
         if (!btnCancelRun) return;
         btnCancelRun.addEventListener('click', function() {
-            if (!currentRunId) return;
+            if (!currentRunId) {
+                resetMonitorToIdle('IDLE', 'Pengujian dibatalkan.');
+                switchStudioTab('plan');
+                return;
+            }
             var self = this;
             showConfirm({
                 title: 'Hentikan Pengujian Sekarang?',
@@ -921,7 +965,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!resultBody) return;
         var sourceList = (plannedSteps.length > 0) ? plannedSteps : completedSteps;
         if (!sourceList || sourceList.length === 0) { resultBody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-3">Menunggu respons worker step pertama...</td></tr>'; return; }
-        var isFinished = (runStatus === 'PASSED' || runStatus === 'FAILED' || runStatus === 'CANCELLED');
+        var isFinished = (runStatus === 'PASSED' || runStatus === 'FAILED' || runStatus === 'CANCELLED' || runStatus === 'IDLE' || runStatus === 'REJECTED');
         resultBody.innerHTML = sourceList.map(function(planItem, idx) { return buildLiveStepRow(planItem, idx, completedSteps, isFinished); }).join('');
     }
 

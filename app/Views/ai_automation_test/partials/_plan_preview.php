@@ -45,6 +45,9 @@
                 <button id="btnCancelRun" class="btn btn-sm btn-outline-danger px-2 py-1 d-none text-nowrap" style="font-size: 0.76rem;" title="Hentikan pengujian yang sedang berjalan">
                     <i class="bi bi-stop-circle me-1"></i> Hentikan
                 </button>
+                <button id="btnBackToPlan" class="btn btn-sm btn-outline-secondary px-2 py-1 text-nowrap" style="font-size: 0.76rem;" title="Kembali ke Tab Test Plan">
+                    <i class="bi bi-arrow-left me-1"></i> Test Plan
+                </button>
             </div>
         </div>
 

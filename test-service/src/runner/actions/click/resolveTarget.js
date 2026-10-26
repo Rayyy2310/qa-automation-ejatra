@@ -15,7 +15,7 @@
 
 const { autoRevealParentContainer } = require('../overlayHandler');
 const { TIMEOUTS, SWAL_SELECTORS, CLICK_TEXT_SELECTORS } = require('../../../utils/constants');
-const { pickBestInteractiveCandidate, isSelectorString, MODAL_CONTAINER_SELECTOR } = require('../../../utils/locatorResolver');
+const { pickBestInteractiveCandidate, isSelectorString, MODAL_CONTAINER_SELECTOR, findBestMatchingRow } = require('../../../utils/locatorResolver');
 const { unwrapLocator, safeCount, exists, safeVisible, existsAndVisible } = require('../../../utils/playwrightHelpers');
 const appProfile = require('../../../utils/appProfile');
 const { extractRowMatches } = require('./intent');
@@ -87,7 +87,9 @@ async function resolveCheckboxOrSelectAll(ctx, activeLocator) {
   }
   if (ctx.isRowCheckbox && !(await safeVisible(activeLocator))) {
     if (ctx.rawTarget && typeof ctx.rawTarget === 'string') {
-      return page.locator(ctx.rawTarget).first();
+      const rawLoc = page.locator(ctx.rawTarget);
+      const bestCb = await pickBestInteractiveCandidate(rawLoc, 'click', ctx.rawTarget);
+      return bestCb || rawLoc.first();
     }
   }
 
@@ -198,7 +200,7 @@ async function resolvePlusOrDetailIconFallback(ctx) {
   const rowQueries = [trMatch?.[1], docMatch?.[0]].filter(Boolean);
 
   for (const q of rowQueries) {
-    const rowLoc = page.locator(`tr:has-text("${q}")`).first();
+    const rowLoc = await findBestMatchingRow(page, q, 'tbody tr, tr');
     if (await exists(rowLoc)) {
       const plusInRow = rowLoc.locator(plusSelectors).first();
       if (await existsAndVisible(plusInRow)) return plusInRow;

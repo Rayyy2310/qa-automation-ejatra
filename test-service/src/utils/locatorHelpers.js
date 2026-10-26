@@ -188,6 +188,63 @@ function matchesKeywords(candidate, target) {
   });
 }
 
+/**
+ * Escape karakter spesial RegExp pada string.
+ *
+ * @param {string} str
+ * @returns {string}
+ */
+function escapeRegExp(str) {
+  return String(str || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Cari baris tabel (<tr>) terbaik berdasarkan rowKey dengan 3 tingkat presisi:
+ * - Tier 1 (Exact Cell Match): ada <td> atau <th> yang teks penuhnya persis sama dengan rowKey
+ * - Tier 2 (Token Boundary Match): teks baris memuat rowKey sebagai token utuh (tidak diikuti -A, _1, /B, atau karakter kode lainnya)
+ * - Tier 3 (Substring Fallback): fallback substring biasa jika Tier 1 & 2 tidak menemukan baris
+ *
+ * Mencegah bug salah pilih baris bersufiks (misal mencari "SMA00020260014" tapi memilih "SMA00020260014-A" di atasnya).
+ *
+ * @param {import('playwright').Page | import('playwright').Locator} container
+ * @param {string} rowKey
+ * @param {string} [rowSelector='tbody tr, tr']
+ * @returns {Promise<import('playwright').Locator>}
+ */
+async function findBestMatchingRow(container, rowKey, rowSelector = 'tbody tr, tr') {
+  const cleanKey = String(rowKey || '').replace(/^[#\.\s]+/, '').trim();
+  if (!cleanKey) {
+    return container.locator(rowSelector).first();
+  }
+
+  const escaped = escapeRegExp(cleanKey);
+  const exactCellRegex = new RegExp(`^\\s*${escaped}\\s*$`, 'i');
+  const tokenBoundaryRegex = new RegExp(`(?:^|[^A-Za-z0-9\\-_\\/])${escaped}(?![A-Za-z0-9\\-_\\/])`, 'i');
+
+  try {
+    // Tier 1: Exact Cell Match pada <td> atau <th>
+    const exactTdRow = container
+      .locator(rowSelector)
+      .filter({ has: container.locator('td, th', { hasText: exactCellRegex }) })
+      .first();
+    if ((await exactTdRow.count().catch(() => 0)) > 0) {
+      return exactTdRow;
+    }
+
+    // Tier 2: Token Boundary Match pada baris (menolak sufiks seperti -A, -1, /REV)
+    const boundaryRow = container
+      .locator(rowSelector)
+      .filter({ hasText: tokenBoundaryRegex })
+      .first();
+    if ((await boundaryRow.count().catch(() => 0)) > 0) {
+      return boundaryRow;
+    }
+  } catch (_) {}
+
+  // Tier 3: Substring Fallback
+  return container.locator(rowSelector).filter({ hasText: cleanKey }).first();
+}
+
 module.exports = {
   MODAL_CONTAINER_SELECTOR,
   isSelectorString,
@@ -195,4 +252,6 @@ module.exports = {
   stripActionFluff,
   getSynonyms,
   matchesKeywords,
+  escapeRegExp,
+  findBestMatchingRow,
 };

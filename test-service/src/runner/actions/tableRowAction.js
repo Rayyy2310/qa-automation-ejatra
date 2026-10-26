@@ -6,6 +6,7 @@
 const { resolveUrl } = require('../../utils/urlHelper');
 const { TIMEOUTS } = require('../../utils/constants');
 const appProfile = require('../../utils/appProfile');
+const { findBestMatchingRow } = require('../../utils/locatorHelpers');
 
 // ---------------------------------------------------------------------------
 // DEFINISI AKSI (dibaca dari konfigurasi app-profile.json)
@@ -239,7 +240,10 @@ async function openHamburgerMenu(page, rowQuery = '') {
             $row = $parentDropdown.closest('tr');
           }
         }
-        return Boolean($row && $row.length > 0 && $row.text().includes(key));
+        if (!$row || !$row.length) return false;
+        const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const boundaryRe = new RegExp('(?:^|[^A-Za-z0-9\\-_\\/])' + escaped + '(?![A-Za-z0-9\\-_\\/])', 'i');
+        return boundaryRe.test($row.text() || '');
       }, { key: cleanKey, pSel: portalMenuSel }).catch(() => false);
 
       if (isCorrectRow) {
@@ -271,7 +275,7 @@ async function openHamburgerMenu(page, rowQuery = '') {
   // 2. Specific rowQuery provided (from tr:has-text or document number)
   if (rowQuery) {
     const cleanKey = rowQuery.replace(/^[#\.\s]+/, '').trim();
-    const specificRow = page.locator(`tbody tr:has-text("${cleanKey}")`).first();
+    const specificRow = await findBestMatchingRow(page, cleanKey, 'tbody tr');
     if ((await specificRow.count().catch(() => 0)) > 0 && (await specificRow.isVisible().catch(() => false))) {
       const specificTrigger = specificRow.locator(
         'td:first-child .dropdown-toggle, ' +
@@ -300,7 +304,7 @@ async function openHamburgerMenu(page, rowQuery = '') {
 
     if (searchVal) {
       await page.waitForTimeout(600);
-      const matchedRow = page.locator(`tbody tr:has-text("${searchVal}")`).first();
+      const matchedRow = await findBestMatchingRow(page, searchVal, 'tbody tr');
       if ((await matchedRow.count().catch(() => 0)) > 0 && (await matchedRow.isVisible().catch(() => false))) {
         const matchedRowTrigger = matchedRow.locator(
           'td:first-child .dropdown-toggle, ' +

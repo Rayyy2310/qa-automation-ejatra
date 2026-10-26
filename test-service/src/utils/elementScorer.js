@@ -287,6 +287,34 @@ async function pickBestInteractiveCandidate(locator, action = 'click', targetTex
           else if (elText === normTarget) s += 200;
           else if (elText.startsWith(normTarget) || elText.endsWith(normTarget)) s += 40;
           else if (elId.includes(normTarget) || elName.includes(normTarget)) s += 60;
+
+          // Row-level Exact Cell & Token Boundary Scoring:
+          // Mencegah salah pilih baris bersufiks (misal mencari "SMA00020260014" tapi memilih "SMA00020260014-A")
+          const trKeyMatch = targetText.match(/tr:has-text\(['"]([^'"]+)['"]\)/i);
+          const docKeyMatch = !trKeyMatch
+            ? targetText.match(/\b[A-Za-z]{2,5}\d{5,}[A-Za-z0-9\-\/._]*\b|\b\d{2,}[A-Za-z0-9\-\/._]+\b/)
+            : null;
+          const targetRowKey = trKeyMatch ? trKeyMatch[1].trim() : (docKeyMatch ? docKeyMatch[0].trim() : '');
+
+          if (targetRowKey) {
+            const parentRow = el.closest('tr');
+            if (parentRow) {
+              const escapedKey = targetRowKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+              const exactCellRe = new RegExp('^\\s*' + escapedKey + '\\s*$', 'i');
+              const tokenBoundaryRe = new RegExp('(?:^|[^A-Za-z0-9\\-_\\/])' + escapedKey + '(?![A-Za-z0-9\\-_\\/])', 'i');
+              const cells = Array.from(parentRow.querySelectorAll('td, th'));
+              const hasExactCell = cells.some(td => exactCellRe.test((td.innerText || td.textContent || '').trim()));
+              const rowText = (parentRow.innerText || parentRow.textContent || '');
+
+              if (hasExactCell) {
+                s += 400;
+              } else if (tokenBoundaryRe.test(rowText)) {
+                s += 250;
+              } else {
+                s -= 150;
+              }
+            }
+          }
         }
 
         const isSidebarOrNav = Boolean(el.closest('.sidebar, aside, nav, .navbar-nav, .sidebar-menu, [role="navigation"], #sidebar, ul.nav, .nav-item'));

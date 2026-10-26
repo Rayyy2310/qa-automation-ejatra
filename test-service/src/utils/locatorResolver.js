@@ -41,6 +41,7 @@ const {
   stripActionFluff,
   getSynonyms,
   matchesKeywords,
+  findBestMatchingRow,
 } = require('./locatorHelpers');
 
 const {
@@ -236,7 +237,7 @@ async function resolveLocatorWithFallback(page, target, timeout = 3000, action =
       const rowKey = trMatch ? trMatch[1] : (docMatch ? docMatch[0] : null);
 
       if (rowKey && rowKey.length >= 3 && !rowKey.startsWith('http')) {
-        const modalRow = activeModal.locator(`tr:has-text("${rowKey}")`).first();
+        const modalRow = await findBestMatchingRow(activeModal, rowKey, 'tbody tr, tr');
         if ((await modalRow.count().catch(() => 0)) > 0 && (await modalRow.isVisible().catch(() => false))) {
           // A. Checkbox pada baris spesifik ini
           if (lowerClean.includes('checkbox') || lowerClean.includes('centang') || action === 'check') {
@@ -553,7 +554,7 @@ async function resolveLocatorWithFallback(page, target, timeout = 3000, action =
     // Cek jika ada pola tr:has-text('...') di dalam target selector
     const trMatch = targetText.match(/tr:has-text\(['"]([^'"]+)['"]\)/i);
     if (trMatch && trMatch[1]) {
-      const rowLoc = page.locator(`tr:has-text("${trMatch[1]}")`).first();
+      const rowLoc = await findBestMatchingRow(page, trMatch[1], 'tbody tr, tr');
       if ((await rowLoc.count().catch(() => 0)) > 0) {
         const plusInRow = rowLoc.locator(PLUS_SELECTORS).first();
         if ((await plusInRow.count().catch(() => 0)) > 0) {
@@ -565,7 +566,7 @@ async function resolveLocatorWithFallback(page, target, timeout = 3000, action =
     // Cek apakah ada nomor dokumen / teks baris di dalam target (misal "001/SMA000-ASC/DO/09/26")
     const docMatch = targetText.match(/\d{3}\/[A-Za-z0-9\-\/]+/);
     if (docMatch && docMatch[0]) {
-      const rowLoc = page.locator(`tr:has-text("${docMatch[0]}")`).first();
+      const rowLoc = await findBestMatchingRow(page, docMatch[0], 'tbody tr, tr');
       if ((await rowLoc.count().catch(() => 0)) > 0) {
         const plusInRow = rowLoc.locator(PLUS_SELECTORS).first();
         if ((await plusInRow.count().catch(() => 0)) > 0) {
@@ -585,7 +586,8 @@ async function resolveLocatorWithFallback(page, target, timeout = 3000, action =
   if (action === 'click' && targetText && (targetText.includes('::') || targetText.includes('|'))) {
     const [rowKeyword, btnKeyword] = targetText.split(/::|\|/).map(s => s.trim());
     if (rowKeyword && btnKeyword) {
-      const rowLoc = page.locator(`tr:has-text("${rowKeyword}")`).locator(`button:has-text("${btnKeyword}"), a:has-text("${btnKeyword}"), .btn:has-text("${btnKeyword}")`).first();
+      const matchedRow = await findBestMatchingRow(page, rowKeyword, 'tbody tr, tr');
+      const rowLoc = matchedRow.locator(`button:has-text("${btnKeyword}"), a:has-text("${btnKeyword}"), .btn:has-text("${btnKeyword}")`).first();
       if (await rowLoc.count() > 0 && await isElementRealAndVisible(rowLoc, action)) {
         return { locator: rowLoc, strategyUsed: 'row_level_action_targeting' };
       }
@@ -677,6 +679,7 @@ module.exports = {
   getSynonyms,
   matchesKeywords,
   stripActionFluff,
+  findBestMatchingRow,
   MODAL_CONTAINER_SELECTOR,
 
   // Dari config
