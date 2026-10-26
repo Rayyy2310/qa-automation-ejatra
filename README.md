@@ -1,231 +1,219 @@
-# e-Jatra AI Automation Testing Studio (QA & QC Engine)
-> **Product Requirements Document (PRD v3) & Technical Architecture Specification**  
-> *Version: 3.0.0 (Enterprise Resilient Edition) | Environment: Local / LAN | Framework: CodeIgniter 4 + Multi-LLM + Playwright*
+# AI Automation Testing Studio — e-Jatra
+
+Platform pengujian otomasi browser berbasis AI (*Natural Language Test Automation*) yang memungkinkan tim QA, Business Analyst, dan Developer membuat, menjalankan, serta memantau skenario pengujian end-to-end menggunakan instruksi Bahasa Indonesia sehari-hari tanpa perlu menulis kode skrip pengujian secara manual.
+
+Proyek ini dibangun dengan arsitektur dua layanan terintegrasi:
+1. **Web Studio & Planner Backend (`CodeIgniter 4` - Port `8080`)**: Antarmuka web untuk manajemen modul, perancangan skenario berbasis Multi-LLM, validasi keamanan *test plan*, antrean eksekusi, serta *Live Execution Monitor*.
+2. **Browser Runner & Scanner Microservice (`Node.js + Playwright` - Port `3001`)**: Layanan eksekutor Playwright berarsitektur *Zero-Hardcode* (berbasis konfigurasi) yang dilengkapi *Smart Locator Resolution*, *3-Tier Table Row Matching*, *Widget Adapters* (Select2, DataTables, SweetAlert), *Self-Healing*, dan *Auto Page Scanner*.
 
 ---
 
-## 📌 1. Executive Summary & Visi Produk v3
+## ✨ Fitur Utama
 
-**e-Jatra AI Automation Testing Studio v3** adalah platform pengujian otomasi cerdas (*Intelligent Test Automation Platform*) yang dirancang untuk menjembatani **tim non-teknis (QA Manual, Business Analyst, Product Owner)** agar dapat merancang, mengeksekusi, dan memelihara pengujian otomasi browser secara mandiri menggunakan **bahasa Indonesia sehari-hari tanpa perlu menulis kode pemrograman**.
-
-### 🌟 Fondasi Arsitektur v3 (The Trio AI Agents Framework):
-Sistem memisahkan secara tegas antara **Perencana Bisnis** (*Planner Layer*) dan **Pelaksana Teknis Browser** (*Executor & Healer Layer*):
-1. **Planner Agent (`LlmService.php`)**: Menganalisis niat pengujian pengguna, memetakan ke kamus modul basis data (`ai_test_module`), dan menghasilkan rencana uji JSON terstandarisasi.
-2. **Generator & Normalizer (`stepNormalizer.js`)**: Memvalidasi dan menormalisasi sintaks JSON multi-format, alias aksi, dan penanganan fallback secara instan tanpa pemborosan token API.
-3. **Executor & Healer Agent (`stepExecutor.js` & `selfHealer.js`)**: Mengeksekusi interaksi browser dengan penanganan otomatis widget khusus (Select2, SweetAlert, native dialog, menu accordion) dan perbaikan selektor mandiri (*Self-Healing*).
+- **Natural Language to Test Plan (Multi-LLM)**: Mengubah skenario berbahasa manusia menjadi langkah pengujian JSON terstruktur menggunakan pilihan provider AI: **Groq Cloud**, **Google Gemini**, **OpenAI**, **Claude Code CLI**, atau **Ollama (Local Offline)**.
+- **Auto Page Scanner & Key Elements Registry**: Memindai halaman aplikasi target secara otomatis (`pageScanner.js`) untuk memetakan struktur menu navigasi (`MenuInduk > Submenu`), input form, tombol, tabel, dan modal ke dalam kamus elemen modul (`ai_test_module`).
+- **Zero-Hardcode & Config-Driven Runner**: Seluruh selektor spesifik aplikasi dipisahkan ke dalam file konfigurasi (`test-service/src/config/app-profile.json`, `field-aliases.json`, `synonyms.json`) sehingga mesin eksekutor tetap generik dan mudah diadaptasi ke aplikasi web lain.
+- **3-Tier Exact Table Row Matching**: Pencocokan baris tabel (`<tr>`) dengan 3 tingkat presisi (*Exact Cell Match* $\rightarrow$ *Token Boundary Match* $\rightarrow$ *Substring Fallback*) agar pencarian nomor dokumen seperti `SMA00020260014` tidak salah memilih baris bersufiks seperti `SMA00020260014-A`.
+- **Proteksi 2 Lapis Mode `read_only` vs `write_test`**:
+  - **Lapis 1 (Pre-Generation)**: Mendeteksi kata kerja mutasi data pada prompt saat mode `read_only` aktif dan memberikan opsi konfirmasi beralih ke `write_test` sebelum memanggil LLM.
+  - **Lapis 2 (Pre-Execution Guard)**: Memblokir langkah klik tombol penyimpanan/mutasi (`Simpan`, `Submit`, `Hapus`, `Verifikasi`, `Pecah`, `Realisasi`, `Batalkan`) jika dijalankan pada mode `read_only`, namun tetap mengizinkan aksi baca/filter (`View Data`, `Detail`, `Cari`, `Filter`, `Tutup`).
+- **Penanganan Otomatis Widget ERP**: Mendukung interaksi otomatis dengan dropdown **Select2**, tabel **DataTables** (termasuk *portal dropdown menu* / tombol hamburger baris), **Bootstrap Modal**, dan konfirmasi **SweetAlert2**.
+- **AI Self-Healing & Bilingual Synonym Locator**: Memperbaiki selektor secara dinamis saat struktur DOM berubah menggunakan algoritma kemiripan teks (*Levenshtein similarity*) dan kamus sinonim Indonesia–Inggris.
+- **Live Execution Monitor & Bukti Visual**: Pemantauan langkah demi langkah secara *real-time* (polling progresif), pembatalan eksekusi instan (*Hentikan Run* / *Cancel All*), eksekusi *Batch Run*, serta tangkapan layar (*screenshot*) otomatis pada setiap langkah.
 
 ---
 
-## 🏗️ 2. Arsitektur Sistem & Diagram Alur Data v3
+## 🛠️ Tech Stack
+
+| Komponen | Teknologi |
+| :--- | :--- |
+| **Web Backend & Dashboard** | PHP 8.2+ / 8.3, CodeIgniter 4.7.4, Bootstrap 5, Vanilla JS (`qa-studio.js`) |
+| **Database** | MySQL / MariaDB (`ejatra_testing`) |
+| **Browser Automation Service** | Node.js 18+, Express.js, Playwright (`@playwright/test`) |
+| **LLM Providers** | Groq API, Google Gemini API, OpenAI API, Claude CLI, Ollama |
+| **Logging & Utilities** | Winston Logger, Axios, Dotenv |
+
+---
+
+## 📂 Struktur Direktori Proyek
+
+```text
+qa/
+├── app/
+│   ├── Config/                  # Konfigurasi rute (Routes.php), database, AiAutomationTest.php
+│   ├── Controllers/
+│   │   └── AiAutomationTest.php # HTTP Controller utama Web Studio
+│   ├── Services/
+│   │   ├── AiPlanService.php      # Service pembuatan & manajemen Test Plan
+│   │   ├── AiExecutionService.php # Service antrean, dispatch eksekusi & hasil test run
+│   │   └── AiScanService.php      # Service pemindaian elemen halaman (Ground Truth)
+│   ├── Libraries/
+│   │   ├── LlmService.php         # Integrasi Multi-LLM, prompt builder & write-intent detector
+│   │   ├── TestPlanValidator.php  # Validasi skema JSON, whitelist aksi & guardrail read_only
+│   │   └── TestServiceRunner.php  # HTTP client penghubung CI4 ke microservice Node.js
+│   ├── Models/                  # Model database (AiTestModule, AiTestCase, AiTestRun, dll.)
+│   └── Views/
+│       └── ai_automation_test/  # UI Web Studio (index, partials, modal, live monitor)
+├── public/
+│   └── assets/
+│       ├── css/                 # Styling dashboard QA Studio
+│       └── js/qa-studio.js      # Logika frontend Studio, Live Monitor, Scanner, Batch Run
+├── test-service/                # Microservice Node.js + Playwright (Port 3001)
+│   ├── scripts/
+│   │   └── audit-hardcode.js    # Script audit penjaga zero-hardcode pada engine
+│   ├── screenshots/             # Direktori penyimpanan bukti screenshot hasil eksekusi
+│   └── src/
+│       ├── config/
+│       │   ├── app-profile.json # Profil selektor & aksi baris tabel aplikasi target
+│       │   ├── field-aliases.json# Kamus alias field form
+│       │   └── synonyms.json    # Kamus sinonim dwibahasa (ID <-> EN)
+│       ├── runner/
+│       │   ├── testRunner.js    # Orkestrator siklus hidup browser & eksekusi test run
+│       │   ├── stepExecutor.js  # Dispatcher eksekusi per langkah & retry/self-healing
+│       │   └── actions/         # Handler modular (click, fill, select, tableRowAction, dll.)
+│       ├── scanner/
+│       │   └── pageScanner.js   # Auto-scanner elemen halaman & struktur navigasi sidebar
+│       ├── utils/
+│       │   ├── locatorResolver.js # Mesin resolusi locator bertingkat
+│       │   ├── locatorHelpers.js  # Helper teks, sinonim & 3-tier row matcher
+│       │   ├── elementScorer.js   # Scoring kandidat elemen interaktif terbaik
+│       │   ├── elementDiscovery.js# Heuristic & proximity DOM discovery
+│       │   ├── stepNormalizer.js  # Normalisasi output JSON dari berbagai LLM
+│       │   └── selfHealer.js      # AI/DOM Self-healing saat selektor utama gagal
+│       └── server.js            # Express REST API server (:3001)
+├── start.bat                    # Script 1-Click Launcher untuk Windows
+└── README.md                    # Dokumentasi proyek
+```
+
+---
+
+## ⚙️ Prasyarat & Instalasi
+
+### 1. Prasyarat Sistem
+- **PHP 8.2+ / 8.3** (dengan ekstensi `intl`, `mbstring`, `mysqli`, `curl`, `json`) dan **MySQL / MariaDB** (port `3306`).
+- **Node.js 18+** dan **npm**.
+- Browser Chromium untuk Playwright.
+
+### 2. Konfigurasi Database & Backend (CodeIgniter 4)
+1. Buat database MySQL bernama `ejatra_testing` dan impor skema tabel (lihat bagian [Skema Database](#-skema-database)).
+2. Salin file `env` menjadi `.env` di direktori root proyek, lalu sesuaikan konfigurasi database dan API Key LLM yang digunakan:
+   ```ini
+   CI_ENVIRONMENT = development
+   app.baseURL = 'http://localhost:8080/'
+
+   database.default.hostname = 127.0.0.1
+   database.default.database = ejatra_testing
+   database.default.username = root
+   database.default.password =
+   database.default.DBDriver = MySQLi
+   database.default.port = 3306
+
+   # Konfigurasi API Key Provider LLM (isi sesuai provider yang dipakai)
+   GROQ_API_KEY = "gsk_..."
+   GEMINI_API_KEY = "AIza..."
+   OPENAI_API_KEY = "sk-..."
+   ```
+
+### 3. Instalasi Microservice Playwright (`test-service`)
+Buka terminal di folder `test-service` lalu instal dependensi dan browser Chromium:
+```powershell
+cd test-service
+npm install
+npx playwright install chromium
+```
+Salin/buat file `.env` di dalam `test-service/` jika diperlukan untuk mengatur port atau kredensial uji default (`AI_TEST_USER`, `AI_TEST_PASSWORD`, `PORT=3001`).
+
+---
+
+## 🚀 Cara Menjalankan Aplikasi
+
+### Opsi A: Menggunakan 1-Click Launcher (Windows)
+Klik dua kali atau jalankan file [`start.bat`](file:///c:/Users/acer/Documents/Projek/qa/start.bat) dari root proyek:
+```powershell
+.\start.bat
+```
+Script ini akan otomatis:
+1. Memastikan layanan MySQL aktif di port `3306`.
+2. Menjalankan server web CodeIgniter 4 di `http://localhost:8080`.
+3. Menjalankan microservice Playwright di `http://localhost:3001`.
+4. Membuka halaman **AI Automation Testing Studio** di browser (`http://localhost:8080/ai-automation-test`).
+
+### Opsi B: Menjalankan Secara Manual via Terminal
+**Terminal 1 — Web Studio (CodeIgniter 4):**
+```powershell
+php spark serve --port 8080
+```
+
+**Terminal 2 — Playwright Test Service (Node.js):**
+```powershell
+cd test-service
+npm run dev
+```
+
+---
+
+## 🔄 Alur Penggunaan (Workflow Studio)
 
 ```mermaid
-graph TD
-    User([QA Tester / User Non-Teknis]) -->|Tulis Skenario Bahasa Alami| Studio[Web Studio Dashboard CI4 :8080]
-    
-    subgraph "1. Planner Layer (Otak Bisnis & Page Registry)"
-        Studio -->|Prompt + Konteks Modul DB| Registry[(ai_test_module & Key Elements Registry)]
-        Registry -->|Kamus Elemen Terverifikasi| LLM[Multi-LLM Engine<br/>Groq / Claude Code CLI / Gemini / OpenAI / Ollama]
-        LLM -->|Rencana Uji JSON Terstruktur| Normalizer[Universal Step Normalizer<br/>Regex & Multiline Fallback Parser]
-    end
-
-    subgraph "2. Validation & Security Layer"
-        Normalizer -->|JSON Normal| Validator[TestPlanValidator<br/>Whitelist 10 Action & Mode Guardrail]
-        Validator -->|Simpan Rencana & Header Run| DB[(MySQL: ejatra_testing)]
-    end
-
-    subgraph "3. Executor & Healer Layer (Tangan Pelaksana)"
-        Validator -->|Trigger Eksekusi REST API| Runner[Playwright Microservice Node.js :3001]
-        Runner -->|Resolve Token Kredensial| SecEnv[Credential Token Resolver]
-        Runner -->|Buka Browser Full HD 1080p| TargetApp[Aplikasi Web e-Jatra Target]
-        TargetApp -->|DOM Events & Auto-Dismiss Dialog| Runner
-        Runner -->|Self-Healing & Auto-Expand Dropdown| TargetApp
-    end
-
-    subgraph "4. Real-time Monitoring & Artefak"
-        Runner -->|Progressive Step Streaming 250ms| Studio
-        Runner -->|Laporan Akhir + Screenshot Bukti| Studio
-        Studio -->|Tampilkan Live Table & Tombol Screen| User
-    end
+flowchart LR
+    A[1. Pilih / Buat Modul Target] --> B[2. Scan Elemen Halaman Opsional]
+    B --> C[3. Tulis Skenario Bahasa Alami]
+    C --> D[4. Pilih Mode: Read-Only / Write-Test]
+    D --> E[5. Generate Test Plan via AI]
+    E --> F[6. Review / Edit Step & Simpan Katalog]
+    F --> G[7. Jalankan Test & Pantau Live Monitor]
 ```
 
----
-
-## 🛡️ 3. Perbandingan Masalah v2 vs Solusi Tuntas v3
-
-| Aspek Tantangan | Kondisi di v2 | Solusi Terpasang di v3 |
-| :--- | :--- | :--- |
-| **Penentuan Selector** | AI berpotensi menebak CSS/XPath yang rapuh (*flaky*) | **Key Elements Registry** di `ai_test_module` + **Bilingual Semantic Locators** + **AI Self-Healing** dinamis di `locatorResolver.js`. |
-| **Keamanan Kredensial** | Kredensial ditulis literal di test plan | Didukung **Credential Token** (misal `{{AI_TEST_USER}}` / `{{AI_TEST_PASSWORD}}`) yang di-resolve saat eksekusi. |
-| **Reliabilitas JSON AI** | Format JSON dari LLM bisa berubah format | **Universal Step Normalizer (`stepNormalizer.js`)** memproses format array, multiline fallback (`fallback: #id`), dan satuan waktu (`8000ms`, `3x retry`) secara instan tanpa boros token. |
-| **Widget Khusus ERP** | Select2, jQuery Datepicker, SweetAlert macet | **Widget Adapter Layer Terintegrasi**: Auto-click Select2 container $\rightarrow$ cari di `.select2-search__field` $\rightarrow$ auto-dismiss SweetAlert popups. |
-| **Navigasi Menu Lipat** | Submenu di dalam sidebar tertutup gagal diklik | **Auto-Expand Accordion (`autoExpandTargetParent`)**: Otomatis mendeteksi dan mengeklik menu induk jika submenu tersembunyi. |
-| **Toleransi Verifikasi** | `assert_visible` mogok jika ada beda sebutan judul | **Resilient Assertions**: Memvalidasi kontainer halaman / tabel aktif sebagai fallback cerdas (*Self-Healed Assertion*). |
-| **Multi-Provider LLM** | Terbatas pada satu vendor API | Mendukung **5 Provider**: Groq API, Claude Code CLI (Langganan Pro Bulanan), Google Gemini, OpenAI, dan Ollama Lokal Offline. |
-
----
-
-## 🎯 4. Spesifikasi Komponen & Modul Teknis
-
-### A. Planner Layer (`app/Libraries/LlmService.php`)
-* **Peran**: Bertindak sebagai **Principal SDET Architect**.
-* **Aturan Navigasi Ketat**:
-  * Aksi `goto` **hanya diizinkan pada Langkah 1** (`goto: "/"`).
-  * Seluruh perpindahan halaman setelah login **wajib menggunakan aksi `click`** (`click: "Dashboard -> Aspal"`) untuk menjaga keutuhan *session* e-Jatra.
-* **Multi-Provider Adapter**:
-  * **Groq Cloud**: Model `openai/gpt-oss-20b` & `qwen/qwen3.6-27b` (Latensi ultra-cepat < 2 detik).
-  * **Claude Code CLI**: Menggunakan langganan bulanan Claude Pro via CLI `claude -p` tanpa biaya API.
-  * **Google Gemini**: Model `gemini-2.0-flash`.
-  * **OpenAI**: Model `gpt-4o-mini`.
-  * **Ollama**: Model `qwen2.5:7b-instruct` (100% lokal offline tanpa internet).
+1. **Kelola Modul**: Daftarkan modul aplikasi beserta *Base URL* dan daftar *Key Elements* (atau gunakan fitur **Auto-Scan Halaman** untuk memindai elemen secara otomatis).
+2. **Tulis Skenario**: Ketik langkah pengujian dengan bahasa sehari-hari, misalnya:
+   ```text
+   1. Login dengan akun user_qa
+   2. Buka menu Aspal > Input SPB
+   3. Cari nomor SPB SMA00020260014
+   4. Klik tombol aksi pada baris SMA00020260014 lalu pilih View Data
+   5. Pastikan detail SPB tampil dan ambil screenshot
+   ```
+3. **Pilih Mode Eksekusi**:
+   - `Read-Only`: Hanya untuk navigasi, pencarian, filter, dan melihat detail data (aman dari perubahan database).
+   - `Write-Test`: Mengizinkan pengisian form transaksi dan klik tombol simpan/ubah/hapus/verifikasi/pecah data.
+4. **Generate & Jalankan**: Klik **Generate Plan**, periksa langkah JSON yang dihasilkan pada tab **Test Plan**, lalu klik **Jalankan Test** untuk memantau eksekusi secara langsung pada tab **Live Monitor**.
 
 ---
 
-### B. Universal Step Normalizer (`test-service/src/utils/stepNormalizer.js`)
-Normalizer bertugas membersihkan dan menstandarisasi rencana pengujian dari LLM sebelum dieksekusi oleh Playwright:
-* **Parsing Multiline Selector**: Mengonversi `css input[name='username']\nfallback: #username` menjadi target utama dan cadangan.
-* **Normalisasi Prefiks**: Memproses `css ...`, `text ...`, `xpath ...`, `id ...`, `name ...` menjadi strategi Playwright yang tepat.
-* **Konversi Waktu & Percobaan**: Mengubah `visible 8000ms` menjadi `timeout: 8000 ms`, dan `3x` menjadi `max_attempts: 3`.
+## 📋 Daftar Aksi Pengujian yang Didukung
 
----
-
-### C. Executor & Healer Layer (`test-service/src/runner/`)
-* **Full HD Viewport (1920x1080)**: Mencegah sidebar e-Jatra terlipat menjadi tampilan mobile.
-* **Auto-Dismiss Dialogs & Overlays (`autoDismissOverlays`)**: Menutup otomatis popup SweetAlert/Modal Bootstrap dan menangani native alert browser (`page.on('dialog')`).
-* **Dropdown & Select2 Adapter**: Otomatis membuka dropdown `Pilih Unit`, mengetik di kolom pencarian, dan memilih baris unit target.
-* **Bilingual Semantic Locators (`locatorResolver.js`)**: Kamus sinonim kata Bahasa Indonesia & Inggris (`Masuk` = `Login`, `Cari` = `Search`/`Filter`, `Unit` = `Kendaraan`/`Alat`).
-* **AI Self-Healing (`selfHealer.js`)**: Pemindaian DOM hidup dengan algoritma *Levenshtein similarity* untuk memperbaiki selector yang diubah developer secara otomatis.
-* **Artefak Pengujian Visual**: Mengambil bukti foto tangkapan layar penuh pada setiap langkah sukses maupun gagal yang langsung disematkan pada tombol **`[📷 Screen]`**.
-
----
-
-### D. Web Studio Dashboard (`app/Controllers/AiAutomationTest.php`)
-* **Live Execution Monitor**: Polling reaktif 250ms dengan pembaruan status per baris langkah (`PENDING`, `RUNNING`, `PASS`, `FAIL`).
-* **Manajemen Antrean & Concurrency**:
-  * Mendukung hingga 5 eksekusi paralel.
-  * Fitur **`Cancel Run`** dan **`Cancel All`** untuk menghentikan pengujian yang macet secara instan.
-  * Auto-timeout pembersihan antrean kedaluwarsa (> 2 menit).
-
----
-
-## 🗄️ 5. Skema Basis Data (MySQL: `ejatra_testing`)
-
-```sql
--- 1. Modul Bisnis & Registry Elemen Kunci
-CREATE TABLE `ai_test_module` (
-  `id` INT AUTO_INCREMENT PRIMARY KEY,
-  `code` VARCHAR(50) NOT NULL UNIQUE,
-  `name` VARCHAR(100) NOT NULL,
-  `base_url` VARCHAR(255) NOT NULL,
-  `business_flow` TEXT,
-  `key_elements` TEXT,
-  `status` ENUM('active','inactive') DEFAULT 'active',
-  `created_at` DATETIME,
-  `updated_at` DATETIME
-);
-
--- 2. Skenario Uji Tersimpan
-CREATE TABLE `ai_test_case` (
-  `id` INT AUTO_INCREMENT PRIMARY KEY,
-  `module_id` INT NOT NULL,
-  `title` VARCHAR(255) NOT NULL,
-  `prompt_scenario` TEXT NOT NULL,
-  `test_plan_json` LONGTEXT NOT NULL,
-  `mode` ENUM('read_only','write_test') DEFAULT 'read_only',
-  `status` ENUM('draft','active','archived') DEFAULT 'active',
-  `created_at` DATETIME,
-  `updated_at` DATETIME,
-  FOREIGN KEY (`module_id`) REFERENCES `ai_test_module`(`id`)
-);
-
--- 3. Header Riwayat Eksekusi
-CREATE TABLE `ai_test_run` (
-  `id` INT AUTO_INCREMENT PRIMARY KEY,
-  `test_case_id` INT NULL,
-  `status` ENUM('QUEUED','RUNNING','PASSED','FAILED','CANCELLED') DEFAULT 'QUEUED',
-  `total_steps` INT DEFAULT 0,
-  `passed_steps` INT DEFAULT 0,
-  `failed_steps` INT DEFAULT 0,
-  `skipped_steps` INT DEFAULT 0,
-  `total_duration_ms` INT DEFAULT 0,
-  `started_at` DATETIME,
-  `finished_at` DATETIME,
-  `created_at` DATETIME,
-  `updated_at` DATETIME
-);
-
--- 4. Rincian Langkah & Artefak
-CREATE TABLE `ai_test_run_detail` (
-  `id` INT AUTO_INCREMENT PRIMARY KEY,
-  `test_run_id` INT NOT NULL,
-  `step_no` INT NOT NULL,
-  `action` VARCHAR(50) NOT NULL,
-  `target_json` TEXT,
-  `value` TEXT,
-  `expected_result` TEXT,
-  `result` ENUM('pending','running','passed','failed','skipped') DEFAULT 'pending',
-  `error` TEXT,
-  `duration_ms` INT DEFAULT 0,
-  `screenshot` VARCHAR(255),
-  `dom_snapshot` VARCHAR(255),
-  FOREIGN KEY (`test_run_id`) REFERENCES `ai_test_run`(`id`) ON DELETE CASCADE
-);
-```
-
----
-
-## 🚀 6. Panduan Menjalankan Sistem (1-Click Launch)
-
-### Persyaratan:
-1. PHP 8.1+ (XAMPP Apache & MySQL aktif di port `3306`).
-2. Node.js 18+ terinstal di sistem.
-3. Playwright browser binaries terpasang (`npx playwright install chromium`).
-
-### Menjalankan Aplikasi:
-Cukup klik dua kali file **[`start.bat`](file:///c:/Users/acer/Documents/Projek/qa/start.bat)** di root proyek.
-Sistem akan otomatis membuka browser ke alamat:
-👉 **`http://localhost:8080/`**
-
----
-
-## ✍️ 7. Panduan Penulisan Skenario Non-Teknis
-
-### Contoh Skenario Dashboard Aspal (Filter & Generate):
-```text
-1. Login dengan akun edpraya
-2. Buka Dashboard Aspal
-3. Pilih unit PT Sarana Maluku Utama
-4. Klik tombol Generate
-5. Pastikan tabel dashboard muncul dan ambil screenshot bukti
-```
-
-### Contoh Skenario Transaksi SPM Aspal (Input Pesanan):
-```text
-1. Login sebagai edpraya
-2. Buka menu SPM Aspal
-3. Klik tombol Buat Pesanan
-4. Pilih customer PT. Jaya Konstruksi
-5. Isi Quantity sebesar 18000 kg
-6. Klik tombol Simpan Transaksi
-7. Pastikan pesan sukses muncul
-```
-
----
-
-## 📋 8. Whitelist 10 Aksi Pengujian Resmi
-
-| Aksi | Fungsi | Contoh Target | Contoh Nilai |
+| Aksi | Fungsi | Contoh Target | Contoh Nilai (`value`) |
 | :--- | :--- | :--- | :--- |
-| **`goto`** | Membuka base URL (Hanya Langkah 1) | `body` | `/` |
-| **`fill`** | Mengisi input formulir teks/angka/tanggal | `input[name='username']` | `edpraya` |
-| **`click`** | Mengeklik tombol, menu, link, atau tab | `Masuk`, `Dashboard -> Aspal` | `-` |
-| **`select`**| Memilih opsi dropdown biasa / Select2 | `Unit`, `Pilih Unit` | `PT Sarana Maluku Utama` |
-| **`search`**| Mengisi kotak pencarian & Enter | `input[type='search']` | `SPM-2026` |
-| **`wait`**  | Memberi jeda stabilisasi DOM | `-` | `1000` *(ms)* |
-| **`assert_visible`** | Memverifikasi elemen/tabel muncul di layar | `PT Sarana Maluku Utama` | `-` |
-| **`assert_text`** | Memverifikasi teks notifikasi muncul | `-` | `Berhasil disimpan` |
-| **`assert_url`** | Memverifikasi URL browser | `-` | `/dashboard` |
-| **`screenshot`** | Mengambil bukti foto tangkapan layar | `body` | `bukti_sukses.png` |
+| **`goto`** | Membuka halaman URL (Langkah 1) | `body` | `/` atau URL penuh |
+| **`fill`** | Mengisi input teks, angka, atau tanggal | `input[name='username']` | `user_qa` |
+| **`click`** | Mengeklik tombol, menu sidebar, tab, atau aksi baris tabel | `Masuk`, `Aspal > Input SPB`, `tr:has-text('SMA00020260014') .dropdown-item:has-text('View Data')` | `-` |
+| **`check`** | Mencentang checkbox atau radio button | `tr:has-text('SMA00020260014') input[type='checkbox']` | `-` |
+| **`select`** | Memilih opsi pada `<select>` native maupun dropdown **Select2** | `Pilih Unit` | `PT Sarana Maluku Utama` |
+| **`search`** | Mengisi kolom pencarian tabel dan menekan Enter | `input[type='search']` | `SMA00020260014` |
+| **`wait`** | Memberikan jeda tunggu eksplisit (ms) atau menunggu elemen | `-` | `1000` |
+| **`assert_visible`** | Memastikan elemen atau teks tampil di layar | `SMA00020260014` | `-` |
+| **`assert_text`** | Memastikan teks notifikasi/elemen sesuai ekspektasi | `.swal2-html-container` | `Berhasil disimpan` |
+| **`assert_url`** | Memastikan URL halaman saat ini memuat path tertentu | `-` | `/dashboard` |
+| **`screenshot`** | Mengambil tangkapan layar penuh sebagai bukti pengujian | `body` | `bukti_pengujian.png` |
 
 ---
 
-*Dokumentasi Resmi e-Jatra Quality Assurance & Quality Control Automation Engineering.*
+## 🗄️ Skema Database (`ejatra_testing`)
+
+Proyek menggunakan 4 tabel utama di MySQL:
+- **`ai_test_module`**: Menyimpan daftar modul aplikasi target (`code`, `name`, `base_url`, `business_flow`, `key_elements`, `status`).
+- **`ai_test_case`**: Menyimpan katalog skenario pengujian (`module_id`, `title`, `prompt_scenario`, `test_plan_json`, `mode`, `status`).
+- **`ai_test_run`**: Menyimpan header riwayat eksekusi (`test_case_id`, `status` [`QUEUED`, `RUNNING`, `PASSED`, `FAILED`, `CANCELLED`], statistik langkah, dan durasi).
+- **`ai_test_run_detail`**: Menyimpan log eksekusi per langkah (`test_run_id`, `step_no`, `action`, `target_json`, `value`, `result`, `error`, `duration_ms`, `screenshot`).
+
+---
+
+## 🧪 Audit Kualitas Kode (Zero-Hardcode Guard)
+
+Untuk memastikan tidak ada selektor ID/class spesifik aplikasi yang tertulis secara *hardcode* di dalam logika mesin (`src/runner`, `src/utils`, `src/scanner`), jalankan perintah berikut:
+
+```powershell
+node test-service/scripts/audit-hardcode.js --check --verbose
+```
+
+Target baseline adalah **`0` temuan hardcode**. Seluruh selektor spesifik aplikasi wajib ditempatkan pada [`test-service/src/config/app-profile.json`](file:///c:/Users/acer/Documents/Projek/qa/test-service/src/config/app-profile.json) atau [`test-service/src/config/field-aliases.json`](file:///c:/Users/acer/Documents/Projek/qa/test-service/src/config/field-aliases.json).
